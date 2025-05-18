@@ -16,12 +16,14 @@
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
 use std::collections::HashMap;
+use std::fs::read;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 
 use anyhow::Result;
+use arc_swap::strategy;
 use bytes::Bytes;
 use parking_lot::{Mutex, MutexGuard, RwLock};
 
@@ -294,7 +296,17 @@ impl LsmStorageInner {
 
     /// Get a key from the storage. In day 7, this can be further optimized by using a bloom filter.
     pub fn get(&self, _key: &[u8]) -> Result<Option<Bytes>> {
-        unimplemented!()
+        let read_guard = self.state.read();
+        match read_guard.memtable.get(_key) {
+            None => Ok(None),
+            Some(val) => {
+                if val.is_empty() {
+                    Ok(None)
+                } else {
+                    Ok(Some(val))
+                }
+            }
+        }
     }
 
     /// Write a batch of data into the storage. Implement in week 2 day 7.
@@ -304,12 +316,25 @@ impl LsmStorageInner {
 
     /// Put a key-value pair into the storage by writing into the current memtable.
     pub fn put(&self, _key: &[u8], _value: &[u8]) -> Result<()> {
-        unimplemented!()
-    }
+        let read_guard = self.state.read();
+        read_guard.memtable.put(_key, _value)?;
+        let is_satisfied = read_guard.memtable.approximate_size() >= self.options.target_sst_size;
+        drop(read_guard);
+
+        if is_satisfied {
+            let state_lock = self.state_lock.lock();
+            let is_satisfied = self.state.read().memtable.approximate_size() >= self.options.target_sst_size;
+            if is_satisfied {
+                self.force_freeze_memtable(&state_lock)?;
+            }
+        }
+
+        Ok(())
+    }   
 
     /// Remove a key from the storage by writing an empty value.
     pub fn delete(&self, _key: &[u8]) -> Result<()> {
-        unimplemented!()
+        self.put(_key, &[])
     }
 
     pub(crate) fn path_of_sst_static(path: impl AsRef<Path>, id: usize) -> PathBuf {
@@ -334,7 +359,8 @@ impl LsmStorageInner {
 
     /// Force freeze the current memtable to an immutable memtable
     pub fn force_freeze_memtable(&self, _state_lock_observer: &MutexGuard<'_, ()>) -> Result<()> {
-        unimplemented!()
+        // unimplemented!()
+        let new_mem_table = MemTable::
     }
 
     /// Force flush the earliest-created immutable memtable to disk
