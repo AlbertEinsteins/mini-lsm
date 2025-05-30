@@ -57,7 +57,7 @@ impl MemTable {
             map: Arc::new(SkipMap::new()),
             wal: None,
             id: _id,
-            approximate_size: Arc::new(AtomicUsize::new(0))
+            approximate_size: Arc::new(AtomicUsize::new(0)),
         }
     }
 
@@ -108,15 +108,11 @@ impl MemTable {
     /// In week 2, day 6, also flush the data to WAL.
     /// In week 3, day 5, modify the function to use the batch API.
     pub fn put(&self, _key: &[u8], _value: &[u8]) -> Result<()> {
-        let (key, val) = (Bytes::copy_from_slice(_key), 
-                                        Bytes::copy_from_slice(_value));
+        let (key, val) = (Bytes::copy_from_slice(_key), Bytes::copy_from_slice(_value));
+        let ent_size = key.len() + val.len();
         self.map.insert(key, val);
-        let mut size: usize = 0;
-        for ent in &*self.map {
-            size += ent.key().len();
-            size += ent.value().len();
-        }
-        self.approximate_size.store(size, std::sync::atomic::Ordering::Relaxed);
+        self.approximate_size
+            .fetch_add(ent_size, std::sync::atomic::Ordering::Relaxed);
         Ok(())
     }
 
@@ -125,7 +121,7 @@ impl MemTable {
         unimplemented!()
     }
 
-    pub fn sync_wal(&self) -> Result<()> {
+    pub fn sync_wal(&self) -> Result<()> { 
         if let Some(ref wal) = self.wal {
             wal.sync()?;
         }
@@ -134,7 +130,15 @@ impl MemTable {
 
     /// Get an iterator over a range of keys.
     pub fn scan(&self, _lower: Bound<&[u8]>, _upper: Bound<&[u8]>) -> MemTableIterator {
-        unimplemented!()
+        let map_clone = self.map.clone();
+        let mut mem_iter = MemTableIteratorBuilder {
+            map: map_clone,
+            iter_builder: |map_clone| map_clone.range((map_bound(_lower), map_bound(_upper))),
+            item: (Bytes::new(), Bytes::new()),
+            is_valid: false,
+        }.build();
+        mem_iter.next();
+        mem_iter
     }
 
     /// Flush the mem-table to SSTable. Implement in week 1 day 6.
@@ -174,24 +178,43 @@ pub struct MemTableIterator {
     iter: SkipMapRangeIter<'this>,
     /// Stores the current key-value pair.
     item: (Bytes, Bytes),
+    
+    is_valid: bool,
 }
 
 impl StorageIterator for MemTableIterator {
     type KeyType<'a> = KeySlice<'a>;
-
+    
     fn value(&self) -> &[u8] {
-        unimplemented!()
+        self.borrow_item().1.as_ref()
     }
 
     fn key(&self) -> KeySlice {
-        unimplemented!()
+        KeySlice::from_slice(self.borrow_item().0.as_ref())
     }
 
     fn is_valid(&self) -> bool {
-        unimplemented!()
+        return *self.borrow_is_valid()
     }
 
     fn next(&mut self) -> Result<()> {
-        unimplemented!()
+        let next_item = {
+            self.with_iter_mut(|iter| iter.next().map(|entry| {
+                (entry.key().clone(), entry.value().clone())
+            }))
+        };
+        self.with_mut(|fields| {
+            match next_item {
+                Some((k, v)) => {
+                    *fields.item = (k, v);
+                    *fields.is_valid = true;
+                },
+                None => {
+                    *fields.is_valid = false;
+                }
+            }
+        });
+
+        Ok(())
     }
 }
