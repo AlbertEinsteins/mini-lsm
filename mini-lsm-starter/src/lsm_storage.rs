@@ -364,7 +364,8 @@ impl LsmStorageInner {
     /// Force freeze the current memtable to an immutable memtable
     pub fn force_freeze_memtable(&self, _state_lock_observer: &MutexGuard<'_, ()>) -> Result<()> {
         // unimplemented!()
-        let new_mem_table = MemTable::
+        // let new_mem_table = MemTable::
+        todo!()
     }
 
     /// Force flush the earliest-created immutable memtable to disk

@@ -15,7 +15,7 @@
 // limitations under the License.
 
 use std::{
-    collections::BTreeMap, ops::Bound, os::unix::fs::MetadataExt, path::Path, sync::Arc,
+    collections::BTreeMap, ops::Bound, path::Path, sync::Arc,
     time::Duration,
 };
 
@@ -432,7 +432,7 @@ pub fn dump_files_in_dir(path: impl AsRef<Path>) {
         print!("{}", f.path().display());
         println!(
             ", size={:.3}KB",
-            f.metadata().unwrap().size() as f64 / 1024.0
+            f.metadata().unwrap().len() as f64 / 1024.0
         );
     }
 }

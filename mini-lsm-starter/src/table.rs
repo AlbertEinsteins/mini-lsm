@@ -20,6 +20,7 @@ mod builder;
 mod iterator;
 
 use std::fs::File;
+use std::io::{Read, Seek, SeekFrom};
 use std::path::Path;
 use std::sync::Arc;
 
@@ -66,13 +67,17 @@ impl BlockMeta {
 pub struct FileObject(Option<File>, u64);
 
 impl FileObject {
+    fn read_exact_at(file: &mut File, buf: &mut [u8], offset: u64) -> Result<()> {
+        file.seek(SeekFrom::Start(offset))?;
+        file.read_exact(buf)?;
+        Ok(())
+    }
+
     pub fn read(&self, offset: u64, len: u64) -> Result<Vec<u8>> {
-        use std::os::unix::fs::FileExt;
+        // use std::os::unix::fs::FileExt;
         let mut data = vec![0; len as usize];
-        self.0
-            .as_ref()
-            .unwrap()
-            .read_exact_at(&mut data[..], offset)?;
+        let mut file = self.0.as_ref().unwrap().try_clone()?;
+        Self::read_exact_at(&mut file, &mut data, offset);
         Ok(data)
     }
 
