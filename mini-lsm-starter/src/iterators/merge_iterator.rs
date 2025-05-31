@@ -16,9 +16,10 @@
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
 use std::cmp::{self};
+use std::collections::binary_heap::PeekMut;
 use std::collections::BinaryHeap;
 
-use anyhow::Result;
+use anyhow::{Ok, Result};
 
 use crate::key::KeySlice;
 
@@ -90,7 +91,32 @@ impl<I: 'static + for<'a> StorageIterator<KeyType<'a> = KeySlice<'a>>> StorageIt
     }
 
     fn next(&mut self) -> Result<()> {
-        
-        unimplemented!()
+        let key = if let Some(wrapper) = self.current.as_ref() {
+            wrapper.1.key()
+        } else {
+            return Ok(());
+        };
+
+        if let Some(mut wrapper) = self.current.take() {
+            wrapper.1.next()?;
+            if wrapper.1.is_valid() {
+                self.iters.push(wrapper);
+            }
+        }
+
+        while let Some(wrapper) = self.iters.peek() {
+            if key != wrapper.1.key() {
+                break;
+            }
+            
+            let mut wrapper = self.iters.pop().unwrap();
+            wrapper.1.next()?;
+            if wrapper.1.is_valid() {
+                self.iters.push(wrapper);
+            }
+        }
+
+        self.current = self.iters.pop();
+        Ok(())
     }
 }
