@@ -107,7 +107,7 @@ impl<I: 'static + for<'a> StorageIterator<KeyType<'a> = KeySlice<'a>>> StorageIt
         while let Some(wrapper) = self.iters.peek() {
             if key != wrapper.1.key() {
                 break;
-            }
+            }   
             
             let mut wrapper = self.iters.pop().unwrap();
             wrapper.1.next()?;
