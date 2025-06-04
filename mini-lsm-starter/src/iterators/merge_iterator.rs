@@ -15,11 +15,9 @@
 #![allow(unused_variables)] // TODO(you): remove this lint after implementing this mod
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
-use std::cmp::{self};
-use std::collections::binary_heap::PeekMut;
-use std::collections::BinaryHeap;
-
 use anyhow::{Ok, Result};
+use std::cmp::{self};
+use std::collections::BinaryHeap;
 
 use crate::key::KeySlice;
 
@@ -61,16 +59,17 @@ pub struct MergeIterator<I: StorageIterator> {
 impl<I: StorageIterator> MergeIterator<I> {
     pub fn create(iters: Vec<Box<I>>) -> Self {
         let mut heap = BinaryHeap::new();
+
         for (idx, iter) in iters.into_iter().enumerate() {
             if iter.is_valid() {
                 heap.push(HeapWrapper(idx, iter));
             }
         }
 
-        let mn = heap.pop();
+        let current = heap.pop();
         Self {
             iters: heap,
-            current: mn,
+            current,
         }
     }
 }
@@ -93,30 +92,43 @@ impl<I: 'static + for<'a> StorageIterator<KeyType<'a> = KeySlice<'a>>> StorageIt
     }
 
     fn next(&mut self) -> Result<()> {
-        let mut wrapper = match self.current.take() {
-            None => return Ok(()),
-            Some(wrapper) => wrapper,
-        };
+        loop {
+            let mut wrapper = match self.current.take() {
+                None => return Ok(()),
+                Some(wrapper) => wrapper,
+            };
 
-        let key = wrapper.1.key().to_key_vec();
-        wrapper.1.next()?;
-        if wrapper.1.is_valid() {
-            self.iters.push(wrapper);
-        }
+            let key = wrapper.1.key().to_key_vec();
 
-        while let Some(wrapper) = self.iters.peek() {
-            if key.as_key_slice() != wrapper.1.key() {
-                break;
-            }   
-            
-            let mut wrapper = self.iters.pop().unwrap();
+            // println!("Jump key {:?}", key);
             wrapper.1.next()?;
             if wrapper.1.is_valid() {
                 self.iters.push(wrapper);
             }
-        }
 
-        self.current = self.iters.pop();
+            while let Some(wrapper) = self.iters.peek() {
+                if key.as_key_slice() != wrapper.1.key() {
+                    break;
+                }
+
+                let mut wrapper = self.iters.pop().unwrap();
+                // println!("Jump key {:?}", wrapper.1.key());
+
+                wrapper.1.next()?;
+                if wrapper.1.is_valid() {
+                    self.iters.push(wrapper);
+                }
+            }
+
+            self.current = self.iters.pop();
+            if self.current.is_some() {
+                let val = self.current.as_ref().unwrap().1.value();
+                // println!("Next key is {:?}, val is {:?}", self.current.as_ref().unwrap().1.key(), val);
+                if !val.is_empty() {
+                    break;
+                }
+            }
+        }
         Ok(())
     }
 }

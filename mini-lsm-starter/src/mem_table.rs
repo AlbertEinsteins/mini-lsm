@@ -26,7 +26,7 @@ use crossbeam_skiplist::SkipMap;
 use ouroboros::self_referencing;
 
 use crate::iterators::StorageIterator;
-use crate::key::{self, KeySlice};
+use crate::key::KeySlice;
 use crate::table::SsTableBuilder;
 use crate::wal::Wal;
 
@@ -121,7 +121,7 @@ impl MemTable {
         unimplemented!()
     }
 
-    pub fn sync_wal(&self) -> Result<()> { 
+    pub fn sync_wal(&self) -> Result<()> {
         if let Some(ref wal) = self.wal {
             wal.sync()?;
         }
@@ -136,8 +136,9 @@ impl MemTable {
             iter_builder: |map_clone| map_clone.range((map_bound(_lower), map_bound(_upper))),
             item: (Bytes::new(), Bytes::new()),
             is_valid: false,
-        }.build();
-        mem_iter.next();
+        }
+        .build();
+        let _ = mem_iter.next();
         mem_iter
     }
 
@@ -178,13 +179,13 @@ pub struct MemTableIterator {
     iter: SkipMapRangeIter<'this>,
     /// Stores the current key-value pair.
     item: (Bytes, Bytes),
-    
+
     is_valid: bool,
 }
 
 impl StorageIterator for MemTableIterator {
     type KeyType<'a> = KeySlice<'a>;
-    
+
     fn value(&self) -> &[u8] {
         self.borrow_item().1.as_ref()
     }
@@ -194,24 +195,23 @@ impl StorageIterator for MemTableIterator {
     }
 
     fn is_valid(&self) -> bool {
-        return *self.borrow_is_valid()
+        *self.borrow_is_valid()
     }
 
     fn next(&mut self) -> Result<()> {
         let next_item = {
-            self.with_iter_mut(|iter| iter.next().map(|entry| {
-                (entry.key().clone(), entry.value().clone())
-            }))
+            self.with_iter_mut(|iter| {
+                iter.next()
+                    .map(|entry| (entry.key().clone(), entry.value().clone()))
+            })
         };
-        self.with_mut(|fields| {
-            match next_item {
-                Some((k, v)) => {
-                    *fields.item = (k, v);
-                    *fields.is_valid = true;
-                },
-                None => {
-                    *fields.is_valid = false;
-                }
+        self.with_mut(|fields| match next_item {
+            Some((k, v)) => {
+                *fields.item = (k, v);
+                *fields.is_valid = true;
+            }
+            None => {
+                *fields.is_valid = false;
             }
         });
 

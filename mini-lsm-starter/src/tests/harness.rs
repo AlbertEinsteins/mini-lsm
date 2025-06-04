@@ -14,10 +14,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::{
-    collections::BTreeMap, ops::Bound, path::Path, sync::Arc,
-    time::Duration,
-};
+use std::{collections::BTreeMap, ops::Bound, path::Path, sync::Arc, time::Duration};
 
 use anyhow::{Result, bail};
 use bytes::Bytes;

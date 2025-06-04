@@ -103,7 +103,7 @@ fn test_task2_merge_1() {
         (Bytes::from("a"), Bytes::from("1.1")),
         (Bytes::from("b"), Bytes::from("2.1")),
         (Bytes::from("c"), Bytes::from("3.1")),
-        (Bytes::from("e"), Bytes::new()),
+        (Bytes::from("e"), Bytes::from("e.1")),
     ]);
     let i2 = MockIterator::new(vec![
         (Bytes::from("a"), Bytes::from("1.2")),
@@ -130,7 +130,7 @@ fn test_task2_merge_1() {
             (Bytes::from("b"), Bytes::from("2.1")),
             (Bytes::from("c"), Bytes::from("3.1")),
             (Bytes::from("d"), Bytes::from("4.2")),
-            (Bytes::from("e"), Bytes::new()),
+            (Bytes::from("e"), Bytes::from("e.1")),
         ],
     );
 
@@ -143,7 +143,7 @@ fn test_task2_merge_1() {
             (Bytes::from("b"), Bytes::from("2.3")),
             (Bytes::from("c"), Bytes::from("3.3")),
             (Bytes::from("d"), Bytes::from("4.3")),
-            (Bytes::from("e"), Bytes::new()),
+            (Bytes::from("e"), Bytes::from("e.1")),
         ],
     );
 }

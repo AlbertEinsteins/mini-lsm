@@ -16,14 +16,12 @@
 #![allow(dead_code)] // TODO(you): remove this lint after implementing this mod
 
 use std::collections::HashMap;
-use std::fs::read;
 use std::ops::Bound;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 use std::sync::atomic::AtomicUsize;
 
 use anyhow::{Ok, Result};
-use arc_swap::strategy;
 use bytes::Bytes;
 use parking_lot::{Mutex, MutexGuard, RwLock};
 
@@ -32,6 +30,8 @@ use crate::compact::{
     CompactionController, CompactionOptions, LeveledCompactionController, LeveledCompactionOptions,
     SimpleLeveledCompactionController, SimpleLeveledCompactionOptions, TieredCompactionController,
 };
+use crate::iterators::StorageIterator;
+use crate::iterators::merge_iterator::MergeIterator;
 use crate::lsm_iterator::{FusedIterator, LsmIterator};
 use crate::manifest::Manifest;
 use crate::mem_table::MemTable;
@@ -404,6 +404,19 @@ impl LsmStorageInner {
         _lower: Bound<&[u8]>,
         _upper: Bound<&[u8]>,
     ) -> Result<FusedIterator<LsmIterator>> {
-        unimplemented!()
+        let state_read = self.state.read();
+        let mut iters = vec![];
+
+        iters.push(Box::new(state_read.memtable.scan(_lower, _upper)));
+        for imm_table in &state_read.imm_memtables {
+            iters.push(Box::new(imm_table.scan(_lower, _upper)));
+        }
+
+        let mut lsm_iterator = LsmIterator::new(MergeIterator::create(iters))?;
+        // jump init-empty value
+        if lsm_iterator.value().is_empty() {
+            lsm_iterator.next()?;
+        }
+        Ok(FusedIterator::new(lsm_iterator))
     }
 }
