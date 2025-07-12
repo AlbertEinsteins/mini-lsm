@@ -32,12 +32,19 @@ pub struct SsTableIterator {
 impl SsTableIterator {
     /// Create a new iterator and seek to the first key-value pair in the first data block.
     pub fn create_and_seek_to_first(table: Arc<SsTable>) -> Result<Self> {
-        unimplemented!()
+        let blk_idx: usize = 0;
+        let block = table.read_block(blk_idx)?;
+        let iter = BlockIterator::create_and_seek_to_first(block);
+        Ok(Self {
+            table,
+            blk_iter: iter,
+            blk_idx,            
+        })
     }
 
     /// Seek to the first key-value pair in the first data block.
     pub fn seek_to_first(&mut self) -> Result<()> {
-        unimplemented!()
+        self.blk_iter.seek_to_first();
     }
 
     /// Create a new iterator and seek to the first key-value pair which >= `key`.

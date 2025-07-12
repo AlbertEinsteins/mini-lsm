@@ -56,9 +56,7 @@ impl Block {
         let mut offsets = Vec::with_capacity(total_records);
         for idx in 0..total_records {
             let off = idx * 2;
-            let off_value = u16::from_be_bytes([
-                data[off_start + off], 
-                data[off_start + off + 1]]);
+            let off_value = u16::from_be_bytes([data[off_start + off], data[off_start + off + 1]]);
             offsets.push(off_value);
         }
 
@@ -69,10 +67,3 @@ impl Block {
     }
 }
 
-
-
-/*
-
-学历：116641202105619205
-学位：1166442021008265
- */

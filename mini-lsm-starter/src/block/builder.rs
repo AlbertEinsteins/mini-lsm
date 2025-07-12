@@ -36,7 +36,7 @@ pub struct BlockBuilder {
 impl BlockBuilder {
     /// Creates a new block builder.
     pub fn new(block_size: usize) -> Self {
-        let rest_space = block_size - 2;        // the space of the number of elements used
+        let rest_space = block_size - 2; // the space of the number of elements used
         Self {
             offsets: Vec::new(),
             data: Vec::new(),
@@ -75,6 +75,9 @@ impl BlockBuilder {
 
     /// Finalize the block.
     pub fn build(self) -> Block {
-        Block { data: self.data, offsets: self.offsets }
+        Block {
+            data: self.data,
+            offsets: self.offsets,
+        }
     }
 }

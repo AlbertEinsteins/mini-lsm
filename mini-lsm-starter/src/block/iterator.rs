@@ -17,7 +17,7 @@
 
 use std::sync::Arc;
 
-use crate::{key::{KeySlice, KeyVec}};
+use crate::key::{KeySlice, KeyVec};
 
 use super::Block;
 
@@ -45,7 +45,7 @@ impl BlockIterator {
             first_key: KeyVec::new(),
         }
     }
-    
+
     fn load_current(&mut self) {
         if self.idx >= self.block.offsets.len() {
             self.key.clear();
@@ -60,7 +60,8 @@ impl BlockIterator {
         let key_end = key_start + key_len;
         // println!("key start: {}, end: {}", key_start, key_end);
 
-        self.key.set_from_slice(KeySlice::from_slice(&self.block.data[key_start..key_end]));
+        self.key
+            .set_from_slice(KeySlice::from_slice(&self.block.data[key_start..key_end]));
 
         if 0 == self.idx {
             self.first_key = self.key.clone();
@@ -68,7 +69,7 @@ impl BlockIterator {
 
         let off = key_end;
         let val_len = u16::from_be_bytes([self.block.data[off], self.block.data[off + 1]]) as usize;
-        let val_start = off + 2 ;
+        let val_start = off + 2;
         let val_end = val_start + val_len;
         self.value_range = (val_start, val_end);
     }
@@ -123,7 +124,7 @@ impl BlockIterator {
         while self.idx < self.block.offsets.len() {
             self.load_current();
             if self.key() >= key {
-                return ;
+                return;
             }
             self.idx += 1;
         }
